@@ -39,15 +39,18 @@ import Data.List
 
 %%
 
+Start
+    : Program {}
+
 Program
     : Function                  { [$1] }
     | Program Function     { $2 : $1 }
 
 Function
-    : Declaration Realization Empty { ($1, (reverse $2)) }
+    : Declaration Realization Empty { Function $1 (reverse $2) }
 
 Declaration
-    : defid "::" Type endl            { ($1, $3) }
+    : defid "::" Type endl            { Decl $1 $3 }
 
 Type
     : Type "->" Type    { Arrow $1 $3 }
@@ -95,7 +98,8 @@ AtomicExpression
 
 Empty
     : endl          {}
-    | Empty endl    {}
+    | Empty endl   {}
+
 
 {
 parseError :: [Token] -> a
@@ -177,9 +181,9 @@ instance Show Pattern where
 patternToStr :: Pattern -> String
 patternToStr (Pattern _ l c e) = case fullCondition l c of
     Nothing -> returnStr
-    Just s  -> "if (" ++ s ++ ") {\n" ++ returnStr ++ "}"
+    Just s  -> "if (" ++ s ++ ") {\n" ++ returnStr ++ "\n}"
     where
-        returnStr = "return " ++ (exprToStr e l) ++ ";\n"
+        returnStr = "return " ++ (exprToStr e l) ++ ";"
 
 fullCondition :: [Var] -> Maybe Expr -> Maybe String
 fullCondition l Nothing = varCondition l
@@ -203,6 +207,9 @@ data Decl = Decl    { funcName :: String
                     , funcType :: Type
                     } deriving Eq
 
+instance Show Decl where
+    show = declToStr
+
 declToStr :: Decl -> String
 declToStr (Decl n t) = "public static " ++ (show l) ++ " " ++ n ++ "(" ++ (printTypeList (zip [0, 1..] i)) ++ ")"
     where
@@ -212,14 +219,26 @@ declToStr (Decl n t) = "public static " ++ (show l) ++ " " ++ n ++ "(" ++ (print
             x:xs    -> (showPair x) ++ ", " ++ (printTypeList xs)
         l = last tl
         i = init tl
-        where
-            tl = typeToList t
-            showPair (i, v) = (show v) ++ " param" ++ (show i)
+        tl = typeToList t
+        showPair (i, v) = (show v) ++ " param" ++ (show i)
                 
 
 typeToList :: Type -> [Type]
 typeToList (Arrow t1 t2) = t1 : (typeToList t2)
 typeToList a@(Simple t) = [a]
+
+data Function = Function Decl [Pattern] deriving Eq
+
+
+instance Show Function where
+    show = funcToStr
+
+funcToStr :: Function -> String
+funcToStr (Function d pl) = (show d) ++ " {\n" ++ (unlines resultRealization) ++ "}"
+    where
+        resultRealization = if (take 6 (last showPl)) /= "return" then (showPl ++ ["throw new IllegalArgumentException();"]) else showPl
+        showPl = map show pl
+
 --printType :: Type -> (String, String)
 --printType 
 
