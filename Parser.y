@@ -3,6 +3,7 @@ module Main (main) where
 
 import Scanner
 import System.IO
+import System.Environment(getArgs)
 
 import Data.Strict.Tuple
 import Data.Either
@@ -40,7 +41,7 @@ import Data.List
 %%
 
 Start
-    : Program {}
+    : Program { $1 }
 
 Program
     : Function                  { [$1] }
@@ -246,7 +247,10 @@ funcToStr (Function d pl) = (show d) ++ " {\n" ++ (unlines resultRealization) ++
 --printType' (Arrow t1 t2) s = printType' 
 
 main = do
-    s <- getContents
-    print . parse . alexScanTokens $ s
+    args    <- getArgs
+    input   <- readFile . head $ args
+    writeFile "output" input
+--    s <- getContents
+--    print . parse . alexScanTokens $ s
 
 }
